@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"strings"
 )
 
 type App struct {
@@ -35,7 +36,15 @@ func (t *TelegramConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
-
+	var request []string
+        // Loop through headers
+        for name, headers := range r.Header {
+          name = strings.ToLower(name)
+          for _, h := range headers {
+            request = append(request, fmt.Sprintf("%v: %v", name, h))
+          }
+        }
+	fmt.Println("Headers:\n", strings.Join(request, "\n"))
 	// read the request body and parse the json
 	var p Payload
 	body, err := io.ReadAll(r.Body)
@@ -78,8 +87,8 @@ func (t *TelegramConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("Client url: ", url)
-	fmt.Println("Client body: ", body)
 	fmt.Println("Client res: ", res)
+	fmt.Println("Client body: ", string(body))
 	fmt.Println("Client err: ", err1)
 
 	if res.StatusCode != http.StatusOK {
