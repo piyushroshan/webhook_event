@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -37,9 +38,16 @@ func (t *TelegramConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// read the request body and parse the json
 	var p Payload
-	err := json.NewDecoder(r.Body).Decode(&p)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	// convert the body to string
+	fmt.Println("Body: ", string(body))
+	err = json.Unmarshal([]byte(body), &p)
+	if err != nil {
+		http.Error(w, "Please provide message in body", http.StatusBadRequest)
 		return
 	}
 	// send the message to telegram channel
@@ -58,7 +66,7 @@ func (t *TelegramConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	client := &http.Client{Transport: tr}
 	defer r.Body.Close()
-	body, err := json.Marshal(tm)
+	body, err = json.Marshal(tm)
 	if err != nil {
 		http.Error(w, "Error parsing request", http.StatusInternalServerError)
 		return
@@ -81,7 +89,6 @@ func (t *TelegramConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Message sent"))
-	return
 }
 
 
@@ -112,3 +119,4 @@ func main() {
   }
   server.Start()
 }
+
