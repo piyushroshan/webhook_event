@@ -8,8 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 	"strings"
+	"time"
 )
 
 type App struct {
@@ -21,14 +21,25 @@ type TelegramConfig struct {
 	ChannelID string
 }
 
-
 type Payload struct {
+	Type string `json:"type"`
+	AlertName string `json:"alert_name"`
 	Message string `json:"message"`
+	Title string `json:"title"`
+	Body string `json:"body"`
+	Classifications []string `json:"classifications"`
+	Media []struct {
+		Timestamp int `json:"timestamp"`
+		Type string `json:"type"`
+		URL string `json:"url"`
+		ThumbnailURL string `json:"thumbnail_url"`
+	} `json:"media"`
 }
 
 type TelegramMessage struct {
 	ChatID string `json:"chat_id"`
 	Text string `json:"text"`
+	ParseMode string `json:"parse_mode"`
 }
 
 func (t *TelegramConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -59,13 +70,26 @@ func (t *TelegramConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please provide message in body", http.StatusBadRequest)
 		return
 	}
+
+	// create the notification message
+	message := fmt.Sprintf("%s\n\n", p.Title)
+	// if there is media, add the media to the message
+	if len(p.Media) > 0 {
+		for _, m := range p.Media {
+			message += fmt.Sprintf("[%s](%s)\n", p.Body, m.URL)
+			//message += fmt.Sprintf("[](%s)\n", m.ThumbnailURL)
+		}
+	}
 	// send the message to telegram channel
 	// https://api.telegram.org/bot{bottoken}/sendMessage
+
+	fmt.Println("Message: ", message)
 
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.BotToken)
 	tm := TelegramMessage{
 		ChatID: t.ChannelID,
-		Text: p.Message,
+		Text: message,
+		ParseMode: "Markdown",
 	}
 
 	tr := &http.Transport{
